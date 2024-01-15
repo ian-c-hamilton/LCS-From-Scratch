@@ -1,2 +1,2 @@
 # LCS
-Learning Classifier Systems from Scratch
+## Learning Classifier Systems from Scratch
