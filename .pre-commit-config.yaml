@@ -17,24 +17,6 @@ repos:
   - id: mixed-line-ending
     args: ['--fix=auto']  # replace 'auto' with 'lf' to enforce Linux/Mac line endings or 'crlf' for Windows
 
-## If you want to automatically "modernize" your Python code:
-# - repo: https://github.com/asottile/pyupgrade
-#   rev: v3.7.0
-#   hooks:
-#   - id: pyupgrade
-#     args: ['--py37-plus']
-
-## If you want to avoid flake8 errors due to unused vars or imports:
-# - repo: https://github.com/PyCQA/autoflake
-#   rev: v2.1.1
-#   hooks:
-#   - id: autoflake
-#     args: [
-#       --in-place,
-#       --remove-all-unused-imports,
-#       --remove-unused-variables,
-#     ]
-
 - repo: https://github.com/PyCQA/isort
   rev: 5.11.5
   hooks:
@@ -60,8 +42,8 @@ repos:
   ## You can add flake8 plugins via `additional_dependencies`:
   #  additional_dependencies: [flake8-bugbear]
 
-## Check for misspells in documentation files:
-# - repo: https://github.com/codespell-project/codespell
-#   rev: v2.2.5
-#   hooks:
-#   - id: codespell
+# Check for misspells in documentation files:
+- repo: https://github.com/codespell-project/codespell
+  rev: v2.2.5
+  hooks:
+  - id: codespell
