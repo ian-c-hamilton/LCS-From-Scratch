@@ -1,0 +1,9 @@
+[submodule "eLCS_JupyterNotebook"]
+	path = eLCS_JupyterNotebook
+	url = https://github.com/ryanurbs/eLCS_JupyterNotebook.git
+[submodule "scikit-eLCS"]
+	path = scikit-eLCS
+	url = https://github.com/UrbsLab/scikit-eLCS.git
+[submodule "scikit-XCS"]
+	path = scikit-XCS
+	url = https://github.com/UrbsLab/scikit-XCS.git
