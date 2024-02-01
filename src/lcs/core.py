@@ -1,100 +1,12 @@
 import copy
-import csv
 import math
 import pprint
 import random
 from pathlib import Path
 
-
-def initialize_population():
-    """Initialize the empty population. This is only called once at the
-    beginning of the cycle."""
-    return []
-
-
-def get_data_length(data):
-    """Get the length of the file so that the get_instance function doesn't
-    return anything if requested line is not present"""
-    with open(data, "r") as file:
-        return sum(1 for row in file)
-
-
-def convert_int(instance):
-    """Convert the instance into a list of integers"""
-    int_instance = []
-    for i in instance:
-        int_instance.append(int(i))
-    return int_instance
-
-
-def get_instance(data, line_num):
-    """Create a function that gets the data from a file an returns a specified
-    instance of the dataset to the LCS This returns a single training instance
-    from the data and does not load the entire data file into memory"""
-
-    lines = get_data_length(data)
-    with open(data, "r") as source:
-        reader = csv.reader(source)
-        if line_num > lines:
-            return
-        for _ in range(line_num):
-            next(reader)
-        return convert_int(next(reader))
-
-
-def does_match(state, instance):
-    """Create a does_match function that compares each attribute between two classifiers
-    The states of each classifier are tuples of (index, value). Only some indices
-    are specified, if they are not, they are equivalent to the hash "don't care"
-    symbol"""
-    for i in range(len(state)):
-        index = state[i][0]
-        if state[i][1] != instance[index]:
-            return False
-    return True
-
-
-def create_match_set(population, instance):
-    """Create the match set by comparing the attributes of each classifier in
-    the population with the current instance"""
-    match_set = []
-    if len(population) == 0:
-        # Returns an empty patch set if the population length is zero, this is
-        # importance for covering
-        return match_set
-    else:
-        # Is a slice of population necessary? This then iterates on the copy of a list,
-        # instead of the original. Do I need to return the edited populataion copy?
-        for classifier in population:
-            state = classifier["state"]
-            if does_match(state, instance) == True:
-                match_set.append(classifier)
-                classifier["match count"] += 1
-                classifier["accuracy"] = (
-                    classifier["correct count"] / classifier["match count"]
-                )
-                classifier["fitness"] = classifier["accuracy"] ** 5
-        return match_set
-
-
-def create_correct_set(match_set, instance):
-    # Create the correct set by comparing the class or action of each classifier in the match set with the current instance
-    correct_set = []
-    # Similar to the match set, return an empty correct set if the match set is empty
-    if len(match_set) == 0:
-        return correct_set
-    else:  # Is the slice of match set necessary? Do I need to return a new match set?
-        for classifier in match_set:
-            # This assumes that the classification is the last item in the training
-            # instance list. Most of the time this is the case
-            if classifier["action"] == instance[-1]:
-                correct_set.append(classifier)
-                classifier["correct count"] += 1
-                classifier["accuracy"] = (
-                    classifier["correct count"] / classifier["match count"]
-                )
-                classifier["fitness"] = classifier["accuracy"] ** 5
-        return correct_set
+from lcs import utils
+from lcs.selection import parent_selection, tournament_selection
+from lcs.set_creation import create_correct_set, create_match_set
 
 
 def covering(instance, iteration, specificity):
@@ -117,43 +29,6 @@ def covering(instance, iteration, specificity):
         "birth iteration": iteration,
     }
     return classifier
-
-
-def update_population(classifier, population):
-    population.append(classifier)
-    return population
-
-
-def testing1(data, specificity):
-    population = initialize_population()
-    length = get_data_length(data)
-    for i in range(1, length):
-        instance = get_instance(data, i)
-        match_set = create_match_set(population, instance)
-        correct_set = create_correct_set(match_set, instance)
-        if len(correct_set) == 0:
-            classifier = covering(instance, i, specificity=specificity)
-            update_population(classifier, population)
-    return population
-
-
-def tournament_selection(correct_set, tournament_size):
-    """Create a function that takes in a set, like the correct set, and selects
-    two parent classifiers"""
-
-    tournament = random.choices(correct_set, k=tournament_size)
-    return tournament
-
-
-def parent_selection(tournament):
-    """Create a function that selects a parent from the tournament"""
-    max_fitness = 0
-    parent_index = 0
-    for i in tournament:
-        if i["fitness"] > max_fitness:
-            max_fitness = i["fitness"]
-            parent_index = tournament.index(i)
-    return tournament[parent_index]
 
 
 def crossover(parent1, parent2, birth_iteration):
@@ -254,7 +129,8 @@ def more_general(parent, offspring):
 
 
 def subsumption(classifier, population):
-    # Do you need to loop through the whole population here? Or can you just update the parent parameters
+    # Do you need to loop through the whole population here? Or can you just update the
+    # parent parameters
     for i in population:
         if i["state"] == classifier["state"] and i["action"] == classifier["action"]:
             i["numerosity"] += 1
@@ -295,7 +171,8 @@ def genetic_algorithm(
     birth_iteration,
 ):
 
-    # Create tournaments from correct set with size equal to a percentage of the correct set size
+    # Create tournaments from correct set with size equal to a percentage of the correct
+    # set size
     tournament1 = tournament_selection(
         correct_set, math.ceil(tournament_size_fraction * len(correct_set))
     )  # Rounds the tournament size up to a whole number if the correct set is small
@@ -317,7 +194,9 @@ def genetic_algorithm(
         subsumption(parent2, population)
     elif already_in(offspring1, population):
         subsumption(offspring1, population)
-    else:  # If the child is not subsumed by either parent, and not already in the population add it to the population
+    # If the child is not subsumed by either parent, and not already in the population
+    # add it to the population
+    else:
         population.append(offspring1)
     if more_general(parent1, offspring2):
         subsumption(parent1, population)
@@ -334,10 +213,11 @@ def deletion(population, max_size):
     cumulative_numerosity = 0
     for i in population:  # Loop through the population and sum all the numerosities
         cumulative_numerosity += i["numerosity"]
+    # if the cumulative numerosity is less than the allowable size no deletion occurs
     if cumulative_numerosity <= max_size:
-        return  # if the cumulative numerosity is less than the allowable size, then no deletion occurs
+        return
 
-    # Continue deletion until the cumulative numerosity is less than or equal to the max size
+    # Continue deletion until the cumulative numerosity less than or equal to max size
     while cumulative_numerosity > max_size:
         # Sort the population based off deletion vote, the highest will be at the front
         population.sort(key=lambda d: d["deletion vote"], reverse=True)
@@ -351,7 +231,7 @@ def deletion(population, max_size):
             population.pop(0)
         cumulative_numerosity = 0  # Reset the cumulative numerosity to 0
         for i in population:
-            # Calculate the cumulative numerosity again and loop back up to the while loop
+            # Calculate the cumulative numerosity again loop back up to the while loop
             cumulative_numerosity += i["numerosity"]
     return
 
@@ -376,12 +256,12 @@ def binaryLCS(
     learning_epochs,
 ):
     learning_epoch = 1
-    population = initialize_population()
-    length = get_data_length(data)
+    population = utils.initialize_population()
+    length = utils.get_data_length(data)
     birth_iteration = 1
     while learning_epoch < learning_epochs:
         for i in range(1, length):
-            instance = get_instance(data, i)
+            instance = utils.get_instance(data, i)
             match_set = create_match_set(population, instance)
             correct_set = create_correct_set(match_set, instance)
             if len(correct_set) == 0:  # Activate covering if the correct set is empty
@@ -408,43 +288,39 @@ def binaryLCS(
     return population
 
 
-def testing2(rule_set, data):
-    if len(rule_set) == 0:
-        return None
-    length = get_data_length(data)
-    number_correct = 0
+def testing1(data, specificity):
+    population = utils.initialize_population()
+    length = utils.get_data_length(data)
     for i in range(1, length):
-        instance = get_instance(data, i)
-        match_set = create_match_set(rule_set, instance)
-        vote1 = sum(j["numerosity"] for j in match_set if j["action"] == 0)
-        vote2 = sum(k["numerosity"] for k in match_set if k["action"] == 1)
-        if vote1 > vote2:
-            vote = 0
-        if vote2 > vote1:
-            vote = 1
-        if vote == instance[-1]:
-            number_correct += 1
-    percent_correct = number_correct / (length - 1)
-    return percent_correct
+        instance = utils.get_instance(data, i)
+        match_set = create_match_set(population, instance)
+        correct_set = create_correct_set(match_set, instance)
+        if len(correct_set) == 0:
+            classifier = covering(instance, i, specificity=specificity)
+            utils.update_population(classifier, population)
+
+    return population
 
 
 def main():
-    population = initialize_population()
+    random.seed(42)
+    population = utils.initialize_population()
     print(population)
     data = Path(__file__).parents[2].joinpath("data/6Multiplexer_Data_Complete.csv")
-    instance = get_instance(data, 1)
+
+    instance = utils.get_instance(data, 1)
     print(instance)
     match_set = create_match_set(population, instance)
     print(population)
     print(match_set)
     x = [(0, 0), (1, 0), (5, 1), (4, 1)]
     y = [0, 0, 1, 1, 1, 1]
-    print(does_match(x, y))
+    print(utils.does_match(x, y))
     correct_set = create_correct_set(match_set, instance)
     print(population)
     print(correct_set)
     classifier = covering(instance, 1, specificity=0.5)
-    update_population(classifier, population)
+    utils.update_population(classifier, population)
     print(population)
     population = testing1(data, 0.5)
     print(population)
